@@ -510,6 +510,178 @@
             touch-action: manipulation;
         }
 
+        /* ===== BOUTON CHOIX VOIX ===== */
+        .btn-voice {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            font-size: 1rem;
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            margin-bottom: 15px;
+            -webkit-appearance: none;
+            touch-action: manipulation;
+            box-shadow: 0 5px 15px rgba(9, 132, 227, 0.3);
+        }
+
+        .btn-voice:active {
+            transform: scale(0.98);
+        }
+
+        .current-voice-name {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        /* ===== MODAL VOIX ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 25px;
+            padding: 25px;
+            width: 100%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: modalIn 0.3s ease;
+        }
+
+        @keyframes modalIn {
+            0% { transform: scale(0.9); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .modal-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .modal-close {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #f0f0f0;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-appearance: none;
+            touch-action: manipulation;
+        }
+
+        .voice-list {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 0 -10px;
+            padding: 0 10px;
+        }
+
+        .voice-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+            -webkit-appearance: none;
+            touch-action: manipulation;
+        }
+
+        .voice-item:active {
+            transform: scale(0.98);
+        }
+
+        .voice-item.selected {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .voice-item-info {
+            flex: 1;
+            text-align: left;
+        }
+
+        .voice-item-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .voice-item-lang {
+            font-size: 0.85rem;
+            opacity: 0.7;
+        }
+
+        .voice-item-test {
+            padding: 10px 15px;
+            background: rgba(255,255,255,0.3);
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            -webkit-appearance: none;
+            touch-action: manipulation;
+        }
+
+        .voice-item.selected .voice-item-test {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .voice-item:not(.selected) .voice-item-test {
+            background: #e0e0e0;
+        }
+
+        .no-voices {
+            text-align: center;
+            padding: 30px;
+            color: #888;
+        }
+
+        .voice-tip {
+            margin-top: 15px;
+            padding: 12px;
+            background: #fff3cd;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            color: #856404;
+        }
+
         /* ===== REMAINING PLAYERS ===== */
         .remaining-players {
             color: white;
@@ -549,6 +721,11 @@
         <!-- Écran Configuration -->
         <div id="setup-screen">
             <div class="setup-title">Ajouter les joueurs</div>
+            
+            <button type="button" class="btn-voice" id="voiceBtn">
+                🎤 Voix : <span class="current-voice-name" id="currentVoiceName">Auto</span>
+            </button>
+            
             <form id="playerForm" class="input-group">
                 <input type="text" 
                        id="playerInput" 
@@ -566,6 +743,22 @@
                 🎮 Commencer la partie
             </button>
             <div class="player-count" id="playerCount">Ajoute entre 1 et 6 joueurs</div>
+        </div>
+
+        <!-- Modal sélection voix -->
+        <div class="modal-overlay" id="voiceModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">🎤 Choisir la voix</div>
+                    <button type="button" class="modal-close" id="closeModal">×</button>
+                </div>
+                <div class="voice-list" id="voiceList">
+                    <!-- Voix générées en JS -->
+                </div>
+                <div class="voice-tip">
+                    💡 Pour plus de voix, va dans Réglages → Accessibilité → Contenu énoncé → Voix
+                </div>
+            </div>
         </div>
 
         <!-- Écran Jeu -->
@@ -658,6 +851,8 @@
         let isSpinning = false;
         let colorWheelRotation = 0;
         let limbWheelRotation = 0;
+        let selectedVoice = null;
+        let availableVoices = [];
 
         const setupScreen = document.getElementById('setup-screen');
         const gameScreen = document.getElementById('game-screen');
@@ -668,6 +863,8 @@
         const startBtn = document.getElementById('startBtn');
         const playerCount = document.getElementById('playerCount');
         const playerForm = document.getElementById('playerForm');
+        const voiceModal = document.getElementById('voiceModal');
+        const voiceList = document.getElementById('voiceList');
 
         // Gestion du formulaire
         playerForm.addEventListener('submit', function(e) {
@@ -695,6 +892,187 @@
         addTouchHandler(document.getElementById('fallBtn'), playerFell);
         addTouchHandler(document.getElementById('restartBtn'), restartGame);
         addTouchHandler(document.getElementById('soundToggle'), toggleSound);
+        
+        // Modal voix
+        addTouchHandler(document.getElementById('voiceBtn'), openVoiceModal);
+        addTouchHandler(document.getElementById('closeModal'), closeVoiceModal);
+        
+        // Fermer modal en cliquant sur overlay
+        voiceModal.addEventListener('click', function(e) {
+            if (e.target === voiceModal) closeVoiceModal();
+        });
+        voiceModal.addEventListener('touchend', function(e) {
+            if (e.target === voiceModal) {
+                e.preventDefault();
+                closeVoiceModal();
+            }
+        });
+
+        function openVoiceModal() {
+            loadVoiceList();
+            voiceModal.classList.add('active');
+        }
+
+        function closeVoiceModal() {
+            voiceModal.classList.remove('active');
+            speechSynthesis.cancel();
+        }
+
+        function loadVoiceList() {
+            const voices = speechSynthesis.getVoices();
+            const frenchVoices = voices.filter(v => v.lang.startsWith('fr'));
+            
+            voiceList.innerHTML = '';
+            
+            if (frenchVoices.length === 0) {
+                voiceList.innerHTML = '<div class="no-voices">Aucune voix française disponible.<br>Vérifie les réglages de ton appareil.</div>';
+                return;
+            }
+
+            // Option Auto en premier
+            const autoItem = createVoiceItem(null, 'Auto (recommandé)', 'Sélection automatique');
+            voiceList.appendChild(autoItem);
+
+            // Trier les voix
+            frenchVoices.sort((a, b) => {
+                const aEnhanced = a.name.toLowerCase().includes('enhanced') || a.name.toLowerCase().includes('premium');
+                const bEnhanced = b.name.toLowerCase().includes('enhanced') || b.name.toLowerCase().includes('premium');
+                if (aEnhanced && !bEnhanced) return -1;
+                if (!aEnhanced && bEnhanced) return 1;
+                return a.name.localeCompare(b.name);
+            });
+
+            frenchVoices.forEach(voice => {
+                const item = createVoiceItem(voice, voice.name, voice.lang);
+                voiceList.appendChild(item);
+            });
+
+            updateVoiceSelection();
+        }
+
+        function createVoiceItem(voice, name, lang) {
+            const item = document.createElement('div');
+            item.className = 'voice-item';
+            item.dataset.voiceName = voice ? voice.name : 'auto';
+            
+            item.innerHTML = `
+                <div class="voice-item-info">
+                    <div class="voice-item-name">${name}</div>
+                    <div class="voice-item-lang">${lang}</div>
+                </div>
+                <button type="button" class="voice-item-test">🔊</button>
+            `;
+
+            // Sélectionner cette voix
+            const selectHandler = function(e) {
+                if (!e.target.classList.contains('voice-item-test')) {
+                    selectVoice(voice);
+                }
+            };
+            item.addEventListener('click', selectHandler);
+            item.addEventListener('touchend', function(e) {
+                if (!e.target.classList.contains('voice-item-test')) {
+                    e.preventDefault();
+                    selectVoice(voice);
+                }
+            });
+
+            // Tester cette voix
+            const testBtn = item.querySelector('.voice-item-test');
+            const testHandler = function(e) {
+                e.stopPropagation();
+                testVoice(voice);
+            };
+            testBtn.addEventListener('click', testHandler);
+            testBtn.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                testVoice(voice);
+            });
+
+            return item;
+        }
+
+        function selectVoice(voice) {
+            selectedVoice = voice;
+            updateVoiceSelection();
+            updateCurrentVoiceDisplay();
+            
+            // Sauvegarder le choix
+            if (voice) {
+                localStorage.setItem('twister-voice', voice.name);
+            } else {
+                localStorage.removeItem('twister-voice');
+            }
+        }
+
+        function updateVoiceSelection() {
+            const items = voiceList.querySelectorAll('.voice-item');
+            items.forEach(item => {
+                const isSelected = selectedVoice 
+                    ? item.dataset.voiceName === selectedVoice.name
+                    : item.dataset.voiceName === 'auto';
+                item.classList.toggle('selected', isSelected);
+            });
+        }
+
+        function updateCurrentVoiceDisplay() {
+            const display = document.getElementById('currentVoiceName');
+            display.textContent = selectedVoice ? selectedVoice.name.replace('(Enhanced)', '').trim() : 'Auto';
+        }
+
+        function testVoice(voice) {
+            speechSynthesis.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance('Soline, pied gauche sur le bleu');
+            utterance.lang = 'fr-FR';
+            utterance.rate = 0.95;
+            
+            if (voice) {
+                utterance.voice = voice;
+            } else {
+                // Mode auto - trouver la meilleure voix
+                const bestVoice = findBestVoice();
+                if (bestVoice) utterance.voice = bestVoice;
+            }
+            
+            speechSynthesis.speak(utterance);
+        }
+
+        function findBestVoice() {
+            const voices = speechSynthesis.getVoices();
+            const preferredVoices = ['Thomas', 'Amelie', 'Audrey', 'Amélie'];
+            
+            for (const preferred of preferredVoices) {
+                const found = voices.find(v => 
+                    v.name.includes(preferred) && v.lang.startsWith('fr')
+                );
+                if (found) return found;
+            }
+            
+            // Voix enhanced
+            const enhanced = voices.find(v => 
+                v.lang.startsWith('fr') && 
+                (v.name.toLowerCase().includes('enhanced') || v.name.toLowerCase().includes('premium'))
+            );
+            if (enhanced) return enhanced;
+            
+            // fr-FR
+            const frFR = voices.find(v => v.lang === 'fr-FR');
+            if (frFR) return frFR;
+            
+            // N'importe quelle française
+            return voices.find(v => v.lang.startsWith('fr'));
+        }
+
+        function loadSavedVoice() {
+            const savedVoiceName = localStorage.getItem('twister-voice');
+            if (savedVoiceName) {
+                const voices = speechSynthesis.getVoices();
+                selectedVoice = voices.find(v => v.name === savedVoiceName) || null;
+            }
+            updateCurrentVoiceDisplay();
+        }
 
         function addPlayer() {
             const name = playerInput.value.trim();
@@ -866,12 +1244,16 @@
                 
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'fr-FR';
-                utterance.rate = 0.9;
-                utterance.pitch = 1.1;
+                utterance.rate = 0.95;
+                utterance.pitch = 1.0;
                 
-                const voices = speechSynthesis.getVoices();
-                const frenchVoice = voices.find(v => v.lang.startsWith('fr'));
-                if (frenchVoice) utterance.voice = frenchVoice;
+                // Utiliser la voix sélectionnée ou trouver la meilleure
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                } else {
+                    const bestVoice = findBestVoice();
+                    if (bestVoice) utterance.voice = bestVoice;
+                }
                 
                 speechSynthesis.speak(utterance);
             }
@@ -926,10 +1308,21 @@
             document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
         }
 
+        // Précharger les voix (important sur iOS)
+        let voicesLoaded = false;
+        
+        function loadVoices() {
+            const voices = speechSynthesis.getVoices();
+            if (voices.length > 0) {
+                voicesLoaded = true;
+                availableVoices = voices.filter(v => v.lang.startsWith('fr'));
+                loadSavedVoice();
+            }
+        }
+        
         if ('speechSynthesis' in window) {
-            speechSynthesis.onvoiceschanged = () => {
-                speechSynthesis.getVoices();
-            };
+            loadVoices();
+            speechSynthesis.onvoiceschanged = loadVoices;
         }
     </script>
 </body>
